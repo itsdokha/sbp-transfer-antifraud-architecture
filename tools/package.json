@@ -1,0 +1,9 @@
+{
+  "name": "sbp-antifraud-diagrams-tools",
+  "private": true,
+  "description": "Рендер BPMN-схемы в SVG/PNG через bpmn-js в headless Chrome",
+  "dependencies": {
+    "bpmn-js": "18.33.0",
+    "puppeteer": "25.18.1"
+  }
+}

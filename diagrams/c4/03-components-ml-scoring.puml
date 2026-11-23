@@ -1,0 +1,38 @@
+@startuml 03-components-ml-scoring
+!include <C4/C4_Component>
+
+title C4 · Уровень 3 · Components — ML Scoring Service (расчёт риска мошенничества по переводу СБП)
+
+Container_Ext(decision, "Decision Service", "Java, gRPC", "Вызывает скоринг, применяет пороги 0,30 / 0,85 и резервные правила")
+ContainerDb_Ext(features, "Online Feature Store", "Redis Cluster", "Онлайн-агрегаты")
+ContainerDb_Ext(registry, "Реестр моделей", "MLflow + S3", "Версии модели, алиас champion")
+ContainerQueue_Ext(kafka, "Шина событий", "Kafka", "Топик af.scores")
+
+Container_Boundary(scoring, "ML Scoring Service") {
+  Component(api, "Scoring API", "gRPC/FastAPI: Score(), /health/ready", "Принимает перевод, возвращает p, версию модели и причины. Без загруженной модели отвечает UNAVAILABLE")
+  Component(assembler, "Feature Assembler", "Python", "Валидирует запрос, считает признаки из самого перевода (сумма, время, новый получатель), объединяет с онлайн-признаками в вектор по схеме модели")
+  Component(fsclient, "Feature Store Client", "redis-py, async", "Пакетное чтение агрегатов, таймаут 20 мс, при промахе подставляет значения по умолчанию")
+  Component(selector, "Model Version Selector", "Python", "Решает, какая версия обслуживает трафик: champion из реестра; при ошибке загрузки остаётся на предыдущей версии")
+  Component(loader, "Model Loader", "mlflow client", "Каждые 5 мин проверяет алиас champion, скачивает артефакт и проверяет схему признаков")
+  Component(inference, "Inference Engine", "CatBoost", "Считает p(мошенничество) по вектору признаков")
+  Component(explainer, "Reason Codes Builder", "SHAP (TreeExplainer)", "Топ-5 признаков, повлиявших на скор, для карточки кейса аналитика")
+  Component(logger, "Score Logger", "aiokafka producer, асинхронно", "Пишет запрос, признаки, скор и версию модели для мониторинга и обучения")
+}
+
+Rel(decision, api, "Запрос скора перевода", "gRPC, таймаут 150 мс")
+Rel(api, assembler, "Поля перевода")
+Rel(assembler, fsclient, "Ключи: отправитель, получатель, устройство")
+Rel(fsclient, features, "MGET агрегатов", "RESP")
+Rel(assembler, inference, "Вектор признаков")
+Rel(inference, selector, "Берёт текущую версию модели")
+Rel(selector, loader, "Новая версия champion")
+Rel(loader, registry, "Получает алиас champion и артефакт", "HTTPS")
+Rel(inference, explainer, "Модель и вектор")
+Rel(inference, api, "p(мошенничество), model_version")
+Rel(explainer, api, "reason_codes")
+Rel(api, decision, "Ответ: p, model_version, reason_codes")
+Rel(api, logger, "Запрос и ответ")
+Rel(logger, kafka, "Лог скоринга", "af.scores")
+
+SHOW_LEGEND()
+@enduml

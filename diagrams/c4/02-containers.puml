@@ -1,0 +1,50 @@
+@startuml 02-containers
+!include <C4/C4_Container>
+
+title C4 · Уровень 2 · Containers — антифрод-система СБП-переводов (Т-Банк)
+
+Person(analyst, "Аналитик антифрода", "Разбирает кейсы высокого риска")
+System_Ext(payments, "Платёжный сервис СБП", "Проводит перевод")
+System_Ext(app, "Мобильное приложение Т-Банка", "Предупреждение о риске")
+System_Ext(fincert, "База ФинЦЕРТ Банка России", "Получатели-дропы")
+System_Ext(support, "Служба поддержки (CRM)", "Жалобы клиентов")
+
+System_Boundary(af, "Антифрод-система СБП-переводов") {
+  Container(decision, "Decision Service", "Java 21, Spring Boot, gRPC", "Стоп-листы и жёсткие правила, вызов скоринга, пороги риска, резервные правила при отказе модели")
+  Container(scoring, "ML Scoring Service", "Python 3.12, FastAPI, CatBoost", "Собирает признаки и считает p(мошенничество) моделью-champion")
+  ContainerDb(features, "Online Feature Store", "Redis Cluster", "Агрегаты по отправителю, получателю и устройству, задержка чтения < 5 мс")
+  Container(streaming, "Feature Streaming Job", "Apache Flink", "Пересчитывает онлайн-агрегаты из потока переводов")
+  ContainerQueue(kafka, "Шина событий", "Apache Kafka", "Топики: transfers, af.decisions, af.scores, af.case_verdicts, af.labels")
+  Container(cases, "Case Management", "React + Java, Spring Boot", "Очередь кейсов высокого риска, карточка с причинами скора, вердикт аналитика")
+  ContainerDb(casedb, "Case DB", "PostgreSQL", "Кейсы, история звонков, вердикты")
+  Container(labels, "Label Collector", "Python, Kafka consumer", "Превращает жалобы и вердикты в метки переводов")
+  ContainerDb(dwh, "Журнал решений и меток (DWH)", "ClickHouse", "Скоры, версии моделей, решения, метки — обучающая выборка")
+  Container(training, "Training Pipeline", "Apache Airflow, Python, CatBoost", "Еженедельно собирает выборку, обучает претендента и сравнивает его с champion")
+  ContainerDb(registry, "Реестр моделей", "MLflow Model Registry + S3", "Версии моделей, метрики, алиас champion")
+}
+
+Rel(payments, decision, "Запрос решения по переводу", "gRPC, SLA 300 мс")
+Rel(decision, payments, "Пропустить / отклонить / приостановить")
+Rel(decision, scoring, "Запрос скора перевода", "gRPC, таймаут 150 мс")
+Rel(scoring, features, "Читает признаки отправителя, получателя и устройства", "RESP")
+Rel(scoring, registry, "Загружает артефакт модели с алиасом champion", "HTTPS, при старте и раз в 5 мин")
+Rel(decision, app, "Предупреждение о риске", "push API")
+Rel(app, decision, "Ответ клиента")
+Rel(decision, cases, "Создаёт кейс высокого риска", "REST")
+Rel(analyst, cases, "Берёт кейс, ставит вердикт", "HTTPS")
+Rel(cases, casedb, "Читает и пишет кейсы", "JDBC")
+Rel(decision, kafka, "Решение и скор с версией модели", "af.decisions")
+Rel(scoring, kafka, "Лог скоринга и признаков", "af.scores")
+Rel(cases, kafka, "Вердикт аналитика", "af.case_verdicts")
+Rel(payments, kafka, "Проведённые переводы", "transfers")
+Rel(support, labels, "Жалоба о мошенничестве", "событие")
+Rel(labels, kafka, "Метки переводов", "af.labels")
+Rel(kafka, streaming, "Поток переводов", "transfers")
+Rel(streaming, features, "Обновляет агрегаты")
+Rel(kafka, dwh, "Решения, скоры, вердикты, метки", "Kafka Engine")
+Rel(fincert, decision, "Реестр дропов для стоп-листа", "ежедневно")
+Rel(training, dwh, "Читает размеченную выборку", "SQL")
+Rel(training, registry, "Регистрирует претендента, переводит алиас champion", "MLflow API")
+
+SHOW_LEGEND()
+@enduml

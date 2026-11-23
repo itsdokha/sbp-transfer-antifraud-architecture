@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_SBP_Antifraud" targetNamespace="http://bpmn.io/schema/bpmn" exporter="hand-written generator" exporterVersion="1.0">
+<bpmn:error id="Error_ModelUnavailable" name="Модель недоступна" errorCode="MODEL_UNAVAILABLE" />
+<bpmn:collaboration id="Collab_SBP_Antifraud">
+<bpmn:documentation>Т-Банк: антифрод-решение по исходящему переводу СБП</bpmn:documentation>
+<bpmn:participant id="Pool_NSPK" name="НСПК (операционный центр СБП)" />
+<bpmn:participant id="Pool_Client" name="Клиент-отправитель (мобильное приложение)" processRef="Process_Client" />
+<bpmn:participant id="Pool_Bank" name="Т-Банк" processRef="Process_Bank" />
+<bpmn:messageFlow id="MF_Submit" name="заявка на перевод" sourceRef="C_Submit" targetRef="P_Start" />
+<bpmn:messageFlow id="MF_Warn" name="предупреждение" sourceRef="D_Warn" targetRef="C_Warn" />
+<bpmn:messageFlow id="MF_Decide" name="подтвердил / отменил" sourceRef="C_Decide" targetRef="D_WaitAnswer" />
+<bpmn:messageFlow id="MF_Call" name="звонок" sourceRef="A_Call" targetRef="C_Call" />
+<bpmn:messageFlow id="MF_Answer" name="ответы клиента" sourceRef="C_Answer" targetRef="A_Call" />
+<bpmn:messageFlow id="MF_ResOk" name="итог: выполнен" sourceRef="P_Complete" targetRef="C_Result" />
+<bpmn:messageFlow id="MF_ResDecl" name="итог: отклонён" sourceRef="P_Decline" targetRef="C_Result" />
+<bpmn:messageFlow id="MF_ToNSPK" name="платёж" sourceRef="P_SendNSPK" targetRef="Pool_NSPK" />
+<bpmn:messageFlow id="MF_FromNSPK" name="подтверждение" sourceRef="Pool_NSPK" targetRef="P_SendNSPK" />
+</bpmn:collaboration>
+<bpmn:process id="Process_Client" isExecutable="false">
+<bpmn:startEvent id="C_Start" name="Клиент решил перевести деньги"><bpmn:outgoing>F_C1</bpmn:outgoing></bpmn:startEvent>
+<bpmn:userTask id="C_Enter" name="Ввести телефон получателя, банк и сумму"><bpmn:incoming>F_C1</bpmn:incoming><bpmn:outgoing>F_C2</bpmn:outgoing></bpmn:userTask>
+<bpmn:userTask id="C_Submit" name="Нажать «Перевести»"><bpmn:incoming>F_C2</bpmn:incoming><bpmn:outgoing>F_C3</bpmn:outgoing></bpmn:userTask>
+<bpmn:exclusiveGateway id="C_Merge"><bpmn:incoming>F_C3</bpmn:incoming><bpmn:incoming>F_C11</bpmn:incoming><bpmn:incoming>F_C12</bpmn:incoming><bpmn:outgoing>F_C4</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:eventBasedGateway id="C_EvGw"><bpmn:incoming>F_C4</bpmn:incoming><bpmn:outgoing>F_C5</bpmn:outgoing><bpmn:outgoing>F_C6</bpmn:outgoing><bpmn:outgoing>F_C7</bpmn:outgoing></bpmn:eventBasedGateway>
+<bpmn:intermediateCatchEvent id="C_Warn" name="Пришло предупреждение о риске"><bpmn:incoming>F_C5</bpmn:incoming><bpmn:outgoing>F_C8</bpmn:outgoing><bpmn:messageEventDefinition id="MED_C_Warn" /></bpmn:intermediateCatchEvent>
+<bpmn:intermediateCatchEvent id="C_Call" name="Звонит аналитик банка"><bpmn:incoming>F_C6</bpmn:incoming><bpmn:outgoing>F_C9</bpmn:outgoing><bpmn:messageEventDefinition id="MED_C_Call" /></bpmn:intermediateCatchEvent>
+<bpmn:intermediateCatchEvent id="C_Result" name="Пришёл итог перевода"><bpmn:incoming>F_C7</bpmn:incoming><bpmn:outgoing>F_C10</bpmn:outgoing><bpmn:messageEventDefinition id="MED_C_Result" /></bpmn:intermediateCatchEvent>
+<bpmn:userTask id="C_Decide" name="Прочитать предупреждение и подтвердить или отменить перевод"><bpmn:incoming>F_C8</bpmn:incoming><bpmn:outgoing>F_C11</bpmn:outgoing></bpmn:userTask>
+<bpmn:userTask id="C_Answer" name="Ответить на вопросы аналитика"><bpmn:incoming>F_C9</bpmn:incoming><bpmn:outgoing>F_C12</bpmn:outgoing></bpmn:userTask>
+<bpmn:endEvent id="C_End" name="Клиент знает итог перевода"><bpmn:incoming>F_C10</bpmn:incoming></bpmn:endEvent>
+<bpmn:sequenceFlow id="F_C1" sourceRef="C_Start" targetRef="C_Enter" />
+<bpmn:sequenceFlow id="F_C2" sourceRef="C_Enter" targetRef="C_Submit" />
+<bpmn:sequenceFlow id="F_C3" sourceRef="C_Submit" targetRef="C_Merge" />
+<bpmn:sequenceFlow id="F_C4" sourceRef="C_Merge" targetRef="C_EvGw" />
+<bpmn:sequenceFlow id="F_C5" sourceRef="C_EvGw" targetRef="C_Warn" />
+<bpmn:sequenceFlow id="F_C6" sourceRef="C_EvGw" targetRef="C_Call" />
+<bpmn:sequenceFlow id="F_C7" sourceRef="C_EvGw" targetRef="C_Result" />
+<bpmn:sequenceFlow id="F_C8" sourceRef="C_Warn" targetRef="C_Decide" />
+<bpmn:sequenceFlow id="F_C9" sourceRef="C_Call" targetRef="C_Answer" />
+<bpmn:sequenceFlow id="F_C10" sourceRef="C_Result" targetRef="C_End" />
+<bpmn:sequenceFlow id="F_C11" name="ждать итог" sourceRef="C_Decide" targetRef="C_Merge" />
+<bpmn:sequenceFlow id="F_C12" name="ждать итог" sourceRef="C_Answer" targetRef="C_Merge" />
+</bpmn:process>
+<bpmn:process id="Process_Bank" isExecutable="false">
+<bpmn:laneSet id="LaneSet_Bank">
+<bpmn:lane id="Lane_Payment" name="Платёжный сервис СБП">
+<bpmn:flowNodeRef>P_Start</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>P_Check</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>P_AskAF</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>P_ApproveMerge</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>P_SendNSPK</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>P_Complete</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>P_EndOk</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>P_DeclineMerge</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>P_Decline</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>P_EndDecl</bpmn:flowNodeRef>
+</bpmn:lane>
+<bpmn:lane id="Lane_Decision" name="Антифрод: сервис решений (Decision Service)">
+<bpmn:flowNodeRef>D_Rules</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>D_GwRules</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>D_AskScore</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>D_Fallback</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>D_ScoreMerge</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>D_Threshold</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>D_GwRisk</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>D_Warn</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>D_WaitAnswer</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>D_GwConfirm</bpmn:flowNodeRef>
+</bpmn:lane>
+<bpmn:lane id="Lane_Scoring" name="Антифрод: ML-скоринг (ML Scoring Service)">
+<bpmn:flowNodeRef>S_Features</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>S_Predict</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>S_Timeout</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>S_Error</bpmn:flowNodeRef>
+</bpmn:lane>
+<bpmn:lane id="Lane_Analyst" name="Аналитик антифрода (Case Management)">
+<bpmn:flowNodeRef>A_Review</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>A_Call</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>A_Verdict</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>A_GwLegit</bpmn:flowNodeRef>
+</bpmn:lane>
+<bpmn:lane id="Lane_MLPlatform" name="ML-платформа (обучение, реестр моделей)">
+<bpmn:flowNodeRef>M_Timer</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_Dataset</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_Train</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_Eval</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_GwBetter</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_Promote</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_EndNew</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_EndKeep</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_Complaint</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_Label</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>M_EndLabel</bpmn:flowNodeRef>
+</bpmn:lane>
+</bpmn:laneSet>
+<bpmn:startEvent id="P_Start" name="Получена заявка на перевод СБП"><bpmn:outgoing>F_P1</bpmn:outgoing><bpmn:messageEventDefinition id="MED_P_Start" /></bpmn:startEvent>
+<bpmn:serviceTask id="P_Check" name="Проверить реквизиты, баланс и лимиты"><bpmn:incoming>F_P1</bpmn:incoming><bpmn:outgoing>F_P2</bpmn:outgoing></bpmn:serviceTask>
+<bpmn:serviceTask id="P_AskAF" name="Запросить решение антифрода"><bpmn:incoming>F_P2</bpmn:incoming><bpmn:outgoing>F_P3</bpmn:outgoing></bpmn:serviceTask>
+<bpmn:exclusiveGateway id="P_ApproveMerge"><bpmn:incoming>F_D8</bpmn:incoming><bpmn:incoming>F_D13</bpmn:incoming><bpmn:incoming>F_A4</bpmn:incoming><bpmn:outgoing>F_P4</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:sendTask id="P_SendNSPK" name="Отправить перевод в НСПК"><bpmn:incoming>F_P4</bpmn:incoming><bpmn:outgoing>F_P5</bpmn:outgoing></bpmn:sendTask>
+<bpmn:serviceTask id="P_Complete" name="Провести списание и уведомить клиента"><bpmn:incoming>F_P5</bpmn:incoming><bpmn:outgoing>F_P6</bpmn:outgoing><bpmn:dataOutputAssociation id="DA_Ok"><bpmn:targetRef>M_DWH</bpmn:targetRef></bpmn:dataOutputAssociation></bpmn:serviceTask>
+<bpmn:endEvent id="P_EndOk" name="Перевод выполнен"><bpmn:incoming>F_P6</bpmn:incoming></bpmn:endEvent>
+<bpmn:exclusiveGateway id="P_DeclineMerge"><bpmn:incoming>F_D2</bpmn:incoming><bpmn:incoming>F_D14</bpmn:incoming><bpmn:incoming>F_A5</bpmn:incoming><bpmn:outgoing>F_P7</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:serviceTask id="P_Decline" name="Отменить перевод и уведомить клиента"><bpmn:incoming>F_P7</bpmn:incoming><bpmn:outgoing>F_P8</bpmn:outgoing><bpmn:dataOutputAssociation id="DA_Decl"><bpmn:targetRef>M_DWH</bpmn:targetRef></bpmn:dataOutputAssociation></bpmn:serviceTask>
+<bpmn:endEvent id="P_EndDecl" name="Перевод отклонён"><bpmn:incoming>F_P8</bpmn:incoming></bpmn:endEvent>
+<bpmn:businessRuleTask id="D_Rules" name="Проверить стоп-листы и жёсткие правила"><bpmn:incoming>F_P3</bpmn:incoming><bpmn:outgoing>F_D1</bpmn:outgoing></bpmn:businessRuleTask>
+<bpmn:exclusiveGateway id="D_GwRules" name="Сработало жёсткое правило?"><bpmn:incoming>F_D1</bpmn:incoming><bpmn:outgoing>F_D2</bpmn:outgoing><bpmn:outgoing>F_D3</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:serviceTask id="D_AskScore" name="Запросить скор модели"><bpmn:incoming>F_D3</bpmn:incoming><bpmn:outgoing>F_D4</bpmn:outgoing></bpmn:serviceTask>
+<bpmn:businessRuleTask id="D_Fallback" name="Посчитать резервный риск по правилам"><bpmn:incoming>F_S3</bpmn:incoming><bpmn:incoming>F_S4</bpmn:incoming><bpmn:outgoing>F_D5</bpmn:outgoing></bpmn:businessRuleTask>
+<bpmn:exclusiveGateway id="D_ScoreMerge"><bpmn:incoming>F_S2</bpmn:incoming><bpmn:incoming>F_D5</bpmn:incoming><bpmn:outgoing>F_D6</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:businessRuleTask id="D_Threshold" name="Определить уровень риска по порогам"><bpmn:incoming>F_D6</bpmn:incoming><bpmn:outgoing>F_D7</bpmn:outgoing><bpmn:dataOutputAssociation id="DA_Score"><bpmn:targetRef>M_DWH</bpmn:targetRef></bpmn:dataOutputAssociation></bpmn:businessRuleTask>
+<bpmn:exclusiveGateway id="D_GwRisk" name="Уровень риска?"><bpmn:incoming>F_D7</bpmn:incoming><bpmn:outgoing>F_D8</bpmn:outgoing><bpmn:outgoing>F_D9</bpmn:outgoing><bpmn:outgoing>F_D10</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:sendTask id="D_Warn" name="Показать клиенту предупреждение о риске"><bpmn:incoming>F_D9</bpmn:incoming><bpmn:outgoing>F_D11</bpmn:outgoing></bpmn:sendTask>
+<bpmn:intermediateCatchEvent id="D_WaitAnswer" name="Получен ответ клиента"><bpmn:incoming>F_D11</bpmn:incoming><bpmn:outgoing>F_D12</bpmn:outgoing><bpmn:messageEventDefinition id="MED_D_WaitAnswer" /></bpmn:intermediateCatchEvent>
+<bpmn:exclusiveGateway id="D_GwConfirm" name="Клиент подтвердил перевод?"><bpmn:incoming>F_D12</bpmn:incoming><bpmn:outgoing>F_D13</bpmn:outgoing><bpmn:outgoing>F_D14</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:dataStoreReference id="S_FeatStore" name="Онлайн-хранилище признаков" />
+<bpmn:serviceTask id="S_Features" name="Собрать признаки перевода"><bpmn:incoming>F_D4</bpmn:incoming><bpmn:outgoing>F_S1</bpmn:outgoing><bpmn:property id="Property_S_Features" name="__targetRef_placeholder" /><bpmn:dataInputAssociation id="DA_Feat"><bpmn:sourceRef>S_FeatStore</bpmn:sourceRef><bpmn:targetRef>Property_S_Features</bpmn:targetRef></bpmn:dataInputAssociation></bpmn:serviceTask>
+<bpmn:serviceTask id="S_Predict" name="Рассчитать вероятность мошенничества моделью"><bpmn:incoming>F_S1</bpmn:incoming><bpmn:outgoing>F_S2</bpmn:outgoing><bpmn:property id="Property_S_Predict" name="__targetRef_placeholder" /><bpmn:dataInputAssociation id="DA_Reg"><bpmn:sourceRef>M_Registry</bpmn:sourceRef><bpmn:targetRef>Property_S_Predict</bpmn:targetRef></bpmn:dataInputAssociation></bpmn:serviceTask>
+<bpmn:boundaryEvent id="S_Timeout" name="Нет ответа за 150 мс" attachedToRef="S_Predict" cancelActivity="true"><bpmn:outgoing>F_S3</bpmn:outgoing><bpmn:timerEventDefinition id="TED_S_Timeout"><bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT0.15S</bpmn:timeDuration></bpmn:timerEventDefinition></bpmn:boundaryEvent>
+<bpmn:boundaryEvent id="S_Error" name="Модель недоступна" attachedToRef="S_Predict" cancelActivity="true"><bpmn:outgoing>F_S4</bpmn:outgoing><bpmn:errorEventDefinition id="EED_S_Error" errorRef="Error_ModelUnavailable" /></bpmn:boundaryEvent>
+<bpmn:userTask id="A_Review" name="Изучить кейс и причины скора"><bpmn:incoming>F_D10</bpmn:incoming><bpmn:outgoing>F_A1</bpmn:outgoing></bpmn:userTask>
+<bpmn:userTask id="A_Call" name="Позвонить клиенту и уточнить перевод"><bpmn:incoming>F_A1</bpmn:incoming><bpmn:outgoing>F_A2</bpmn:outgoing></bpmn:userTask>
+<bpmn:userTask id="A_Verdict" name="Зафиксировать вердикт по кейсу"><bpmn:incoming>F_A2</bpmn:incoming><bpmn:outgoing>F_A3</bpmn:outgoing><bpmn:dataOutputAssociation id="DA_Verdict"><bpmn:targetRef>M_DWH</bpmn:targetRef></bpmn:dataOutputAssociation></bpmn:userTask>
+<bpmn:exclusiveGateway id="A_GwLegit" name="Перевод легитимный?"><bpmn:incoming>F_A3</bpmn:incoming><bpmn:outgoing>F_A4</bpmn:outgoing><bpmn:outgoing>F_A5</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:dataStoreReference id="M_Registry" name="Реестр моделей (MLflow)" />
+<bpmn:dataStoreReference id="M_DWH" name="Журнал решений и меток (DWH)" />
+<bpmn:startEvent id="M_Timer" name="Еженедельно, вс 03:00"><bpmn:outgoing>F_M1</bpmn:outgoing><bpmn:timerEventDefinition id="TED_M_Timer"><bpmn:timeCycle xsi:type="bpmn:tFormalExpression">0 0 3 ? * SUN</bpmn:timeCycle></bpmn:timerEventDefinition></bpmn:startEvent>
+<bpmn:serviceTask id="M_Dataset" name="Собрать обучающую выборку с метками"><bpmn:incoming>F_M1</bpmn:incoming><bpmn:outgoing>F_M2</bpmn:outgoing><bpmn:property id="Property_M_Dataset" name="__targetRef_placeholder" /><bpmn:dataInputAssociation id="DA_Train"><bpmn:sourceRef>M_DWH</bpmn:sourceRef><bpmn:targetRef>Property_M_Dataset</bpmn:targetRef></bpmn:dataInputAssociation></bpmn:serviceTask>
+<bpmn:serviceTask id="M_Train" name="Обучить модель-претендента"><bpmn:incoming>F_M2</bpmn:incoming><bpmn:outgoing>F_M3</bpmn:outgoing></bpmn:serviceTask>
+<bpmn:serviceTask id="M_Eval" name="Сравнить претендента с текущей моделью"><bpmn:incoming>F_M3</bpmn:incoming><bpmn:outgoing>F_M4</bpmn:outgoing></bpmn:serviceTask>
+<bpmn:exclusiveGateway id="M_GwBetter" name="Претендент лучше?"><bpmn:incoming>F_M4</bpmn:incoming><bpmn:outgoing>F_M5</bpmn:outgoing><bpmn:outgoing>F_M6</bpmn:outgoing></bpmn:exclusiveGateway>
+<bpmn:serviceTask id="M_Promote" name="Опубликовать модель как champion"><bpmn:incoming>F_M5</bpmn:incoming><bpmn:outgoing>F_M7</bpmn:outgoing><bpmn:dataOutputAssociation id="DA_Promote"><bpmn:targetRef>M_Registry</bpmn:targetRef></bpmn:dataOutputAssociation></bpmn:serviceTask>
+<bpmn:endEvent id="M_EndNew" name="Новая версия модели в проде"><bpmn:incoming>F_M7</bpmn:incoming></bpmn:endEvent>
+<bpmn:endEvent id="M_EndKeep" name="Оставлена текущая версия"><bpmn:incoming>F_M6</bpmn:incoming></bpmn:endEvent>
+<bpmn:startEvent id="M_Complaint" name="Жалоба клиента о мошенничестве"><bpmn:outgoing>F_M8</bpmn:outgoing><bpmn:messageEventDefinition id="MED_M_Complaint" /></bpmn:startEvent>
+<bpmn:serviceTask id="M_Label" name="Записать метку «мошенничество» по жалобе"><bpmn:incoming>F_M8</bpmn:incoming><bpmn:outgoing>F_M9</bpmn:outgoing><bpmn:dataOutputAssociation id="DA_Label"><bpmn:targetRef>M_DWH</bpmn:targetRef></bpmn:dataOutputAssociation></bpmn:serviceTask>
+<bpmn:endEvent id="M_EndLabel" name="Метка добавлена"><bpmn:incoming>F_M9</bpmn:incoming></bpmn:endEvent>
+<bpmn:sequenceFlow id="F_P1" sourceRef="P_Start" targetRef="P_Check" />
+<bpmn:sequenceFlow id="F_P2" sourceRef="P_Check" targetRef="P_AskAF" />
+<bpmn:sequenceFlow id="F_P3" sourceRef="P_AskAF" targetRef="D_Rules" />
+<bpmn:sequenceFlow id="F_D1" sourceRef="D_Rules" targetRef="D_GwRules" />
+<bpmn:sequenceFlow id="F_D2" name="Да: отказ по правилу" sourceRef="D_GwRules" targetRef="P_DeclineMerge" />
+<bpmn:sequenceFlow id="F_D3" name="Нет" sourceRef="D_GwRules" targetRef="D_AskScore" />
+<bpmn:sequenceFlow id="F_D4" sourceRef="D_AskScore" targetRef="S_Features" />
+<bpmn:sequenceFlow id="F_S1" sourceRef="S_Features" targetRef="S_Predict" />
+<bpmn:sequenceFlow id="F_S2" name="скор p" sourceRef="S_Predict" targetRef="D_ScoreMerge" />
+<bpmn:sequenceFlow id="F_S3" sourceRef="S_Timeout" targetRef="D_Fallback" />
+<bpmn:sequenceFlow id="F_S4" sourceRef="S_Error" targetRef="D_Fallback" />
+<bpmn:sequenceFlow id="F_D5" name="резервный скор" sourceRef="D_Fallback" targetRef="D_ScoreMerge" />
+<bpmn:sequenceFlow id="F_D6" sourceRef="D_ScoreMerge" targetRef="D_Threshold" />
+<bpmn:sequenceFlow id="F_D7" sourceRef="D_Threshold" targetRef="D_GwRisk" />
+<bpmn:sequenceFlow id="F_D8" name="Низкий: p &lt; 0,30" sourceRef="D_GwRisk" targetRef="P_ApproveMerge" />
+<bpmn:sequenceFlow id="F_D9" name="Средний: 0,30–0,85" sourceRef="D_GwRisk" targetRef="D_Warn" />
+<bpmn:sequenceFlow id="F_D10" name="Высокий: p ≥ 0,85, перевод приостановлен" sourceRef="D_GwRisk" targetRef="A_Review" />
+<bpmn:sequenceFlow id="F_D11" sourceRef="D_Warn" targetRef="D_WaitAnswer" />
+<bpmn:sequenceFlow id="F_D12" sourceRef="D_WaitAnswer" targetRef="D_GwConfirm" />
+<bpmn:sequenceFlow id="F_D13" name="Да" sourceRef="D_GwConfirm" targetRef="P_ApproveMerge" />
+<bpmn:sequenceFlow id="F_D14" name="Нет" sourceRef="D_GwConfirm" targetRef="P_DeclineMerge" />
+<bpmn:sequenceFlow id="F_A1" sourceRef="A_Review" targetRef="A_Call" />
+<bpmn:sequenceFlow id="F_A2" sourceRef="A_Call" targetRef="A_Verdict" />
+<bpmn:sequenceFlow id="F_A3" sourceRef="A_Verdict" targetRef="A_GwLegit" />
+<bpmn:sequenceFlow id="F_A4" name="Да" sourceRef="A_GwLegit" targetRef="P_ApproveMerge" />
+<bpmn:sequenceFlow id="F_A5" name="Нет: мошенничество" sourceRef="A_GwLegit" targetRef="P_DeclineMerge" />
+<bpmn:sequenceFlow id="F_P4" sourceRef="P_ApproveMerge" targetRef="P_SendNSPK" />
+<bpmn:sequenceFlow id="F_P5" sourceRef="P_SendNSPK" targetRef="P_Complete" />
+<bpmn:sequenceFlow id="F_P6" sourceRef="P_Complete" targetRef="P_EndOk" />
+<bpmn:sequenceFlow id="F_P7" sourceRef="P_DeclineMerge" targetRef="P_Decline" />
+<bpmn:sequenceFlow id="F_P8" sourceRef="P_Decline" targetRef="P_EndDecl" />
+<bpmn:sequenceFlow id="F_M1" sourceRef="M_Timer" targetRef="M_Dataset" />
+<bpmn:sequenceFlow id="F_M2" sourceRef="M_Dataset" targetRef="M_Train" />
+<bpmn:sequenceFlow id="F_M3" sourceRef="M_Train" targetRef="M_Eval" />
+<bpmn:sequenceFlow id="F_M4" sourceRef="M_Eval" targetRef="M_GwBetter" />
+<bpmn:sequenceFlow id="F_M5" name="Да" sourceRef="M_GwBetter" targetRef="M_Promote" />
+<bpmn:sequenceFlow id="F_M6" name="Нет" sourceRef="M_GwBetter" targetRef="M_EndKeep" />
+<bpmn:sequenceFlow id="F_M7" sourceRef="M_Promote" targetRef="M_EndNew" />
+<bpmn:sequenceFlow id="F_M8" sourceRef="M_Complaint" targetRef="M_Label" />
+<bpmn:sequenceFlow id="F_M9" sourceRef="M_Label" targetRef="M_EndLabel" />
+</bpmn:process>
+<bpmndi:BPMNDiagram id="Diagram_1" name="Решение по исходящему переводу СБП">
+<bpmndi:BPMNPlane id="Plane_1" bpmnElement="Collab_SBP_Antifraud">
+<bpmndi:BPMNShape id="Pool_NSPK_di" bpmnElement="Pool_NSPK" isHorizontal="true"><dc:Bounds x="100" y="40" width="2860" height="70" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Pool_Client_di" bpmnElement="Pool_Client" isHorizontal="true"><dc:Bounds x="100" y="140" width="2860" height="340" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Pool_Bank_di" bpmnElement="Pool_Bank" isHorizontal="true"><dc:Bounds x="100" y="600" width="2860" height="1120" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Lane_Payment_di" bpmnElement="Lane_Payment" isHorizontal="true"><dc:Bounds x="130" y="600" width="2830" height="240" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Lane_Decision_di" bpmnElement="Lane_Decision" isHorizontal="true"><dc:Bounds x="130" y="840" width="2830" height="200" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Lane_Scoring_di" bpmnElement="Lane_Scoring" isHorizontal="true"><dc:Bounds x="130" y="1040" width="2830" height="200" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Lane_Analyst_di" bpmnElement="Lane_Analyst" isHorizontal="true"><dc:Bounds x="130" y="1240" width="2830" height="180" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="Lane_MLPlatform_di" bpmnElement="Lane_MLPlatform" isHorizontal="true"><dc:Bounds x="130" y="1420" width="2830" height="300" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_Start_di" bpmnElement="C_Start"><dc:Bounds x="162" y="292" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_Enter_di" bpmnElement="C_Enter"><dc:Bounds x="250" y="270" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_Submit_di" bpmnElement="C_Submit"><dc:Bounds x="400" y="270" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_Merge_di" bpmnElement="C_Merge" isMarkerVisible="true"><dc:Bounds x="575" y="285" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_EvGw_di" bpmnElement="C_EvGw"><dc:Bounds x="675" y="285" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_Warn_di" bpmnElement="C_Warn"><dc:Bounds x="762" y="202" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="705" y="170" width="150" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_Call_di" bpmnElement="C_Call"><dc:Bounds x="862" y="292" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="835" y="260" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_Result_di" bpmnElement="C_Result"><dc:Bounds x="942" y="382" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="985" y="404" width="80" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_Decide_di" bpmnElement="C_Decide"><dc:Bounds x="960" y="180" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_Answer_di" bpmnElement="C_Answer"><dc:Bounds x="960" y="270" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="C_End_di" bpmnElement="C_End"><dc:Bounds x="1082" y="382" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_Start_di" bpmnElement="P_Start"><dc:Bounds x="442" y="652" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_Check_di" bpmnElement="P_Check"><dc:Bounds x="530" y="630" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_AskAF_di" bpmnElement="P_AskAF"><dc:Bounds x="680" y="630" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_ApproveMerge_di" bpmnElement="P_ApproveMerge" isMarkerVisible="true"><dc:Bounds x="2395" y="645" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_SendNSPK_di" bpmnElement="P_SendNSPK"><dc:Bounds x="2490" y="630" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_Complete_di" bpmnElement="P_Complete"><dc:Bounds x="2650" y="630" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_EndOk_di" bpmnElement="P_EndOk"><dc:Bounds x="2832" y="652" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_DeclineMerge_di" bpmnElement="P_DeclineMerge" isMarkerVisible="true"><dc:Bounds x="2395" y="745" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_Decline_di" bpmnElement="P_Decline"><dc:Bounds x="2490" y="730" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="P_EndDecl_di" bpmnElement="P_EndDecl"><dc:Bounds x="2672" y="752" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_Rules_di" bpmnElement="D_Rules"><dc:Bounds x="680" y="900" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_GwRules_di" bpmnElement="D_GwRules" isMarkerVisible="true"><dc:Bounds x="865" y="915" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_AskScore_di" bpmnElement="D_AskScore"><dc:Bounds x="950" y="900" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_Fallback_di" bpmnElement="D_Fallback"><dc:Bounds x="1280" y="900" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_ScoreMerge_di" bpmnElement="D_ScoreMerge" isMarkerVisible="true"><dc:Bounds x="1455" y="915" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_Threshold_di" bpmnElement="D_Threshold"><dc:Bounds x="1540" y="900" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_GwRisk_di" bpmnElement="D_GwRisk" isMarkerVisible="true"><dc:Bounds x="1715" y="915" width="50" height="50" /><bpmndi:BPMNLabel><dc:Bounds x="1650" y="892" width="85" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_Warn_di" bpmnElement="D_Warn"><dc:Bounds x="1860" y="900" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_WaitAnswer_di" bpmnElement="D_WaitAnswer"><dc:Bounds x="2052" y="922" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="D_GwConfirm_di" bpmnElement="D_GwConfirm" isMarkerVisible="true"><dc:Bounds x="2145" y="915" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S_FeatStore_di" bpmnElement="S_FeatStore"><dc:Bounds x="835" y="1115" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S_Features_di" bpmnElement="S_Features"><dc:Bounds x="950" y="1100" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S_Predict_di" bpmnElement="S_Predict"><dc:Bounds x="1120" y="1100" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S_Timeout_di" bpmnElement="S_Timeout"><dc:Bounds x="1132" y="1082" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1065" y="1048" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="S_Error_di" bpmnElement="S_Error"><dc:Bounds x="1192" y="1082" width="36" height="36" /><bpmndi:BPMNLabel><dc:Bounds x="1205" y="1048" width="90" height="27" /></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="A_Review_di" bpmnElement="A_Review"><dc:Bounds x="1820" y="1290" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="A_Call_di" bpmnElement="A_Call"><dc:Bounds x="1980" y="1290" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="A_Verdict_di" bpmnElement="A_Verdict"><dc:Bounds x="2140" y="1290" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="A_GwLegit_di" bpmnElement="A_GwLegit" isMarkerVisible="true"><dc:Bounds x="2305" y="1305" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_Registry_di" bpmnElement="M_Registry"><dc:Bounds x="1335" y="1465" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_DWH_di" bpmnElement="M_DWH"><dc:Bounds x="2175" y="1465" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_Timer_di" bpmnElement="M_Timer"><dc:Bounds x="442" y="1622" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_Dataset_di" bpmnElement="M_Dataset"><dc:Bounds x="540" y="1600" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_Train_di" bpmnElement="M_Train"><dc:Bounds x="700" y="1600" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_Eval_di" bpmnElement="M_Eval"><dc:Bounds x="860" y="1600" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_GwBetter_di" bpmnElement="M_GwBetter" isMarkerVisible="true"><dc:Bounds x="1045" y="1615" width="50" height="50" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_Promote_di" bpmnElement="M_Promote"><dc:Bounds x="1160" y="1600" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_EndNew_di" bpmnElement="M_EndNew"><dc:Bounds x="1342" y="1622" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_EndKeep_di" bpmnElement="M_EndKeep"><dc:Bounds x="1162" y="1472" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_Complaint_di" bpmnElement="M_Complaint"><dc:Bounds x="2382" y="1622" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_Label_di" bpmnElement="M_Label"><dc:Bounds x="2470" y="1600" width="120" height="80" /></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="M_EndLabel_di" bpmnElement="M_EndLabel"><dc:Bounds x="2652" y="1622" width="36" height="36" /></bpmndi:BPMNShape>
+<bpmndi:BPMNEdge id="F_C1_di" bpmnElement="F_C1"><di:waypoint x="198" y="310" /><di:waypoint x="250" y="310" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C2_di" bpmnElement="F_C2"><di:waypoint x="370" y="310" /><di:waypoint x="400" y="310" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C3_di" bpmnElement="F_C3"><di:waypoint x="520" y="310" /><di:waypoint x="575" y="310" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C4_di" bpmnElement="F_C4"><di:waypoint x="625" y="310" /><di:waypoint x="675" y="310" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C5_di" bpmnElement="F_C5"><di:waypoint x="700" y="285" /><di:waypoint x="700" y="220" /><di:waypoint x="762" y="220" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C6_di" bpmnElement="F_C6"><di:waypoint x="725" y="310" /><di:waypoint x="862" y="310" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C7_di" bpmnElement="F_C7"><di:waypoint x="700" y="335" /><di:waypoint x="700" y="400" /><di:waypoint x="942" y="400" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C8_di" bpmnElement="F_C8"><di:waypoint x="798" y="220" /><di:waypoint x="960" y="220" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C9_di" bpmnElement="F_C9"><di:waypoint x="898" y="310" /><di:waypoint x="960" y="310" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C10_di" bpmnElement="F_C10"><di:waypoint x="978" y="400" /><di:waypoint x="1082" y="400" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C11_di" bpmnElement="F_C11"><di:waypoint x="1020" y="180" /><di:waypoint x="1020" y="152" /><di:waypoint x="600" y="152" /><di:waypoint x="600" y="285" /><bpmndi:BPMNLabel><dc:Bounds x="620" y="156" width="70" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_C12_di" bpmnElement="F_C12"><di:waypoint x="1020" y="350" /><di:waypoint x="1020" y="355" /><di:waypoint x="600" y="355" /><di:waypoint x="600" y="335" /><bpmndi:BPMNLabel><dc:Bounds x="620" y="358" width="70" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_P1_di" bpmnElement="F_P1"><di:waypoint x="478" y="670" /><di:waypoint x="530" y="670" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_P2_di" bpmnElement="F_P2"><di:waypoint x="650" y="670" /><di:waypoint x="680" y="670" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_P3_di" bpmnElement="F_P3"><di:waypoint x="740" y="710" /><di:waypoint x="740" y="900" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D1_di" bpmnElement="F_D1"><di:waypoint x="800" y="940" /><di:waypoint x="865" y="940" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D2_di" bpmnElement="F_D2"><di:waypoint x="890" y="915" /><di:waypoint x="890" y="770" /><di:waypoint x="2395" y="770" /><bpmndi:BPMNLabel><dc:Bounds x="896" y="880" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D3_di" bpmnElement="F_D3"><di:waypoint x="915" y="940" /><di:waypoint x="950" y="940" /><bpmndi:BPMNLabel><dc:Bounds x="923" y="918" width="30" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D4_di" bpmnElement="F_D4"><di:waypoint x="1010" y="980" /><di:waypoint x="1010" y="1100" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_S1_di" bpmnElement="F_S1"><di:waypoint x="1070" y="1140" /><di:waypoint x="1120" y="1140" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_S2_di" bpmnElement="F_S2"><di:waypoint x="1240" y="1140" /><di:waypoint x="1480" y="1140" /><di:waypoint x="1480" y="965" /><bpmndi:BPMNLabel><dc:Bounds x="1248" y="1118" width="37" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_S3_di" bpmnElement="F_S3"><di:waypoint x="1150" y="1082" /><di:waypoint x="1150" y="940" /><di:waypoint x="1280" y="940" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_S4_di" bpmnElement="F_S4"><di:waypoint x="1210" y="1082" /><di:waypoint x="1210" y="940" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D5_di" bpmnElement="F_D5"><di:waypoint x="1400" y="940" /><di:waypoint x="1455" y="940" /><bpmndi:BPMNLabel><dc:Bounds x="1408" y="918" width="87" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D6_di" bpmnElement="F_D6"><di:waypoint x="1505" y="940" /><di:waypoint x="1540" y="940" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D7_di" bpmnElement="F_D7"><di:waypoint x="1660" y="940" /><di:waypoint x="1715" y="940" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D8_di" bpmnElement="F_D8"><di:waypoint x="1740" y="915" /><di:waypoint x="1740" y="670" /><di:waypoint x="2395" y="670" /><bpmndi:BPMNLabel><dc:Bounds x="1748" y="680" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D9_di" bpmnElement="F_D9"><di:waypoint x="1765" y="940" /><di:waypoint x="1860" y="940" /><bpmndi:BPMNLabel><dc:Bounds x="1766" y="946" width="60" height="28" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D10_di" bpmnElement="F_D10"><di:waypoint x="1740" y="965" /><di:waypoint x="1740" y="1330" /><di:waypoint x="1820" y="1330" /><bpmndi:BPMNLabel><dc:Bounds x="1748" y="1000" width="120" height="28" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D11_di" bpmnElement="F_D11"><di:waypoint x="1980" y="940" /><di:waypoint x="2052" y="940" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D12_di" bpmnElement="F_D12"><di:waypoint x="2088" y="940" /><di:waypoint x="2145" y="940" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D13_di" bpmnElement="F_D13"><di:waypoint x="2170" y="915" /><di:waypoint x="2170" y="670" /><bpmndi:BPMNLabel><dc:Bounds x="2176" y="880" width="20" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_D14_di" bpmnElement="F_D14"><di:waypoint x="2195" y="940" /><di:waypoint x="2380" y="940" /><di:waypoint x="2380" y="770" /><di:waypoint x="2395" y="770" /><bpmndi:BPMNLabel><dc:Bounds x="2203" y="918" width="30" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_A1_di" bpmnElement="F_A1"><di:waypoint x="1940" y="1330" /><di:waypoint x="1980" y="1330" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_A2_di" bpmnElement="F_A2"><di:waypoint x="2100" y="1330" /><di:waypoint x="2140" y="1330" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_A3_di" bpmnElement="F_A3"><di:waypoint x="2260" y="1330" /><di:waypoint x="2305" y="1330" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_A4_di" bpmnElement="F_A4"><di:waypoint x="2330" y="1305" /><di:waypoint x="2330" y="670" /><bpmndi:BPMNLabel><dc:Bounds x="2336" y="1270" width="20" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_A5_di" bpmnElement="F_A5"><di:waypoint x="2355" y="1330" /><di:waypoint x="2420" y="1330" /><di:waypoint x="2420" y="795" /><bpmndi:BPMNLabel><dc:Bounds x="2350" y="1310" width="110" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_P4_di" bpmnElement="F_P4"><di:waypoint x="2445" y="670" /><di:waypoint x="2490" y="670" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_P5_di" bpmnElement="F_P5"><di:waypoint x="2610" y="670" /><di:waypoint x="2650" y="670" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_P6_di" bpmnElement="F_P6"><di:waypoint x="2770" y="670" /><di:waypoint x="2832" y="670" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_P7_di" bpmnElement="F_P7"><di:waypoint x="2445" y="770" /><di:waypoint x="2490" y="770" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_P8_di" bpmnElement="F_P8"><di:waypoint x="2610" y="770" /><di:waypoint x="2672" y="770" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_M1_di" bpmnElement="F_M1"><di:waypoint x="478" y="1640" /><di:waypoint x="540" y="1640" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_M2_di" bpmnElement="F_M2"><di:waypoint x="660" y="1640" /><di:waypoint x="700" y="1640" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_M3_di" bpmnElement="F_M3"><di:waypoint x="820" y="1640" /><di:waypoint x="860" y="1640" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_M4_di" bpmnElement="F_M4"><di:waypoint x="980" y="1640" /><di:waypoint x="1045" y="1640" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_M5_di" bpmnElement="F_M5"><di:waypoint x="1095" y="1640" /><di:waypoint x="1160" y="1640" /><bpmndi:BPMNLabel><dc:Bounds x="1103" y="1618" width="30" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_M6_di" bpmnElement="F_M6"><di:waypoint x="1070" y="1615" /><di:waypoint x="1070" y="1490" /><di:waypoint x="1162" y="1490" /><bpmndi:BPMNLabel><dc:Bounds x="1076" y="1575" width="30" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_M7_di" bpmnElement="F_M7"><di:waypoint x="1280" y="1640" /><di:waypoint x="1342" y="1640" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_M8_di" bpmnElement="F_M8"><di:waypoint x="2418" y="1640" /><di:waypoint x="2470" y="1640" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="F_M9_di" bpmnElement="F_M9"><di:waypoint x="2590" y="1640" /><di:waypoint x="2652" y="1640" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="MF_Submit_di" bpmnElement="MF_Submit"><di:waypoint x="460" y="350" /><di:waypoint x="460" y="652" /><bpmndi:BPMNLabel><dc:Bounds x="466" y="500" width="100" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="MF_Warn_di" bpmnElement="MF_Warn"><di:waypoint x="1920" y="900" /><di:waypoint x="1920" y="495" /><di:waypoint x="780" y="495" /><di:waypoint x="780" y="238" /><bpmndi:BPMNLabel><dc:Bounds x="1926" y="820" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="MF_Decide_di" bpmnElement="MF_Decide"><di:waypoint x="1080" y="220" /><di:waypoint x="1170" y="220" /><di:waypoint x="1170" y="508" /><di:waypoint x="2070" y="508" /><di:waypoint x="2070" y="922" /><bpmndi:BPMNLabel><dc:Bounds x="1176" y="255" width="120" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="MF_Call_di" bpmnElement="MF_Call"><di:waypoint x="1995" y="1290" /><di:waypoint x="1995" y="521" /><di:waypoint x="880" y="521" /><di:waypoint x="880" y="328" /><bpmndi:BPMNLabel><dc:Bounds x="1940" y="1270" width="50" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="MF_Answer_di" bpmnElement="MF_Answer"><di:waypoint x="1080" y="310" /><di:waypoint x="1200" y="310" /><di:waypoint x="1200" y="534" /><di:waypoint x="2025" y="534" /><di:waypoint x="2025" y="1290" /><bpmndi:BPMNLabel><dc:Bounds x="1206" y="330" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="MF_ResOk_di" bpmnElement="MF_ResOk"><di:waypoint x="2710" y="630" /><di:waypoint x="2710" y="547" /><di:waypoint x="960" y="547" /><di:waypoint x="960" y="418" /><bpmndi:BPMNLabel><dc:Bounds x="2716" y="610" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="MF_ResDecl_di" bpmnElement="MF_ResDecl"><di:waypoint x="2610" y="770" /><di:waypoint x="2635" y="770" /><di:waypoint x="2635" y="560" /><di:waypoint x="972" y="560" /><di:waypoint x="972" y="418" /><bpmndi:BPMNLabel><dc:Bounds x="2641" y="728" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="MF_ToNSPK_di" bpmnElement="MF_ToNSPK"><di:waypoint x="2530" y="630" /><di:waypoint x="2530" y="110" /><bpmndi:BPMNLabel><dc:Bounds x="2486" y="120" width="40" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="MF_FromNSPK_di" bpmnElement="MF_FromNSPK"><di:waypoint x="2570" y="110" /><di:waypoint x="2570" y="630" /><bpmndi:BPMNLabel><dc:Bounds x="2576" y="120" width="90" height="14" /></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DA_Feat_di" bpmnElement="DA_Feat"><di:waypoint x="885" y="1140" /><di:waypoint x="950" y="1140" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DA_Reg_di" bpmnElement="DA_Reg"><di:waypoint x="1360" y="1465" /><di:waypoint x="1360" y="1210" /><di:waypoint x="1180" y="1210" /><di:waypoint x="1180" y="1180" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DA_Promote_di" bpmnElement="DA_Promote"><di:waypoint x="1280" y="1640" /><di:waypoint x="1300" y="1640" /><di:waypoint x="1300" y="1490" /><di:waypoint x="1335" y="1490" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DA_Score_di" bpmnElement="DA_Score"><di:waypoint x="1600" y="980" /><di:waypoint x="1600" y="1450" /><di:waypoint x="2188" y="1450" /><di:waypoint x="2188" y="1465" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DA_Verdict_di" bpmnElement="DA_Verdict"><di:waypoint x="2212" y="1370" /><di:waypoint x="2212" y="1465" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DA_Ok_di" bpmnElement="DA_Ok"><di:waypoint x="2750" y="710" /><di:waypoint x="2750" y="1498" /><di:waypoint x="2225" y="1498" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DA_Decl_di" bpmnElement="DA_Decl"><di:waypoint x="2550" y="810" /><di:waypoint x="2550" y="1482" /><di:waypoint x="2225" y="1482" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DA_Label_di" bpmnElement="DA_Label"><di:waypoint x="2530" y="1600" /><di:waypoint x="2530" y="1560" /><di:waypoint x="2212" y="1560" /><di:waypoint x="2212" y="1515" /></bpmndi:BPMNEdge>
+<bpmndi:BPMNEdge id="DA_Train_di" bpmnElement="DA_Train"><di:waypoint x="2175" y="1490" /><di:waypoint x="2140" y="1490" /><di:waypoint x="2140" y="1570" /><di:waypoint x="600" y="1570" /><di:waypoint x="600" y="1600" /></bpmndi:BPMNEdge>
+</bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>
